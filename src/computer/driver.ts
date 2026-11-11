@@ -65,6 +65,24 @@ const APP_NAME = "CuaDriver";
 const INSTALLER = "https://cua.ai/driver/install.sh";
 const INSTALLER_WINDOWS = "https://cua.ai/driver/install.ps1";
 
+/**
+ * Where `install.ps1` puts `cua-driver.exe`: its bin directory on the user's
+ * PATH (a junction to the active release), the release junction under its
+ * package home, and the older `trycua` layout. PATH itself is read
+ * when this process started, so a driver installed since is only found here.
+ */
+const windowsPaths = (home: string) => {
+	const local = process.env.LOCALAPPDATA ?? join(home, "AppData", "Local");
+	const packages = process.env.CUA_DRIVER_RS_HOME ?? join(home, ".cua-driver");
+	return [
+		process.env.CUA_DRIVER_RS_INSTALL_DIR &&
+			join(process.env.CUA_DRIVER_RS_INSTALL_DIR, "cua-driver.exe"),
+		join(local, "Programs", "Cua", "cua-driver", "bin", "cua-driver.exe"),
+		join(packages, "packages", "current", "cua-driver.exe"),
+		join(local, "Programs", "trycua", "cua-driver-rs", "bin", "cua-driver.exe"),
+	];
+};
+
 const destroy = (object: unknown) => {
 	try {
 		(object as { uniffiDestroy?: () => void }).uniffiDestroy?.();
@@ -180,15 +198,7 @@ export const Driver = {
 				process.env.CUA_DRIVER_PATH,
 				Paths.which("cua-driver", Paths.common()),
 				bundle && join(bundle, "Contents", "MacOS", "cua-driver"),
-				process.platform === "win32" &&
-					join(
-						process.env.LOCALAPPDATA ?? join(home, "AppData", "Local"),
-						"Programs",
-						"trycua",
-						"cua-driver-rs",
-						"bin",
-						"cua-driver.exe",
-					),
+				...(process.platform === "win32" ? windowsPaths(home) : []),
 			].find((file): file is string => !!file && Paths.isExecutable(file));
 
 		let version: string | undefined;
