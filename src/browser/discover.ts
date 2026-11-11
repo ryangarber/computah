@@ -104,19 +104,37 @@ export const playwrightHome = (home?: string) =>
 	join(Paths.data(home), "playwright", "node_modules");
 
 /**
+ * Where a runtime's `npm install -g` puts packages: beside it on Windows,
+ * else its prefix's `lib/node_modules` (nvm, fnm, Volta and friends each
+ * keep their own prefix, which no fixed list can name).
+ */
+const globalModules = (executable: string) => {
+	let real = executable;
+	try {
+		real = realpathSync(executable);
+	} catch {}
+	return process.platform === "win32"
+		? join(dirname(real), "node_modules")
+		: join(dirname(dirname(real)), "lib", "node_modules");
+};
+
+/**
  * Playwright, in the order it should be trusted: one passed in, the copy
  * computah was installed with, one computah downloaded, the project's own
  * (walking up from the working directory, pnpm's store included), then global
- * installs and npx's cache, newest first.
+ * installs (the found runtime's own among them) and npx's cache, newest first.
  */
 export const findPlaywright = ({
 	playwright,
 	cwd = process.cwd(),
 	home,
+	runtime,
 }: {
 	playwright?: string;
 	cwd?: string;
 	home?: string;
+	/** The runtime the driver will run in, whose global packages count. */
+	runtime?: string;
 } = {}): PlaywrightInstall | undefined => {
 	if (playwright) {
 		const pkg = readJson(join(playwright, "package.json"));
@@ -165,11 +183,11 @@ export const findPlaywright = ({
 	if (local[0]) return local[0];
 
 	const user = homedir();
-	const prefix = dirname(dirname(process.execPath));
 	const global = [
-		process.platform === "win32"
-			? join(dirname(process.execPath), "node_modules")
-			: join(prefix, "lib", "node_modules"),
+		...new Set([
+			globalModules(process.execPath),
+			...(runtime ? [globalModules(runtime)] : []),
+		]),
 		"/usr/local/lib/node_modules",
 		"/opt/homebrew/lib/node_modules",
 		join(user, ".npm-global", "lib", "node_modules"),

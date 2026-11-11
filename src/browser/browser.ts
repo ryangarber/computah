@@ -276,6 +276,7 @@ export const createBrowser = (options: BrowserOptions = {}): Browser => {
 			playwright: options.playwright,
 			cwd: options.cwd,
 			home: options.home,
+			runtime: found?.path,
 		});
 		const browsers = findBrowsers({ executablePath: options.executablePath });
 
