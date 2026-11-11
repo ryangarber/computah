@@ -1,3 +1,9 @@
+## v0.1.3 (2026-11-11)
+
+### Bug Fixes
+
+- use correct windows install location ([0bb8e0b](https://github.com/ryangarber/computah/commit/0bb8e0bbffc2c476d8ea00ce8c56e00f7f111ae6))
+
 ## v0.1.2 (2026-11-11)
 
 ### Bug Fixes
