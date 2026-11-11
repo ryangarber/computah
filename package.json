@@ -1,0 +1,79 @@
+{
+	"name": "computah",
+	"version": "0.1.0",
+	"description": "Typed browser, terminal and computer use, with one grammar of steps.",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.mts",
+			"import": "./dist/index.mjs"
+		},
+		"./schema": {
+			"types": "./dist/schema.d.mts",
+			"import": "./dist/schema.mjs"
+		},
+		"./browser": {
+			"types": "./dist/browser.d.mts",
+			"import": "./dist/browser.mjs"
+		},
+		"./terminal": {
+			"types": "./dist/terminal.d.mts",
+			"import": "./dist/terminal.mjs"
+		},
+		"./computer": {
+			"types": "./dist/computer.d.mts",
+			"import": "./dist/computer.mjs"
+		}
+	},
+	"main": "./dist/index.mjs",
+	"types": "./dist/index.d.mts",
+	"scripts": {
+		"lint": "biome check --write .",
+		"typecheck": "tsc --noEmit",
+		"build": "tsdown",
+		"test": "vitest run"
+	},
+	"keywords": [
+		"agent",
+		"computer-use",
+		"browser-use",
+		"terminal",
+		"playwright",
+		"tmux",
+		"cua"
+	],
+	"author": "Ryan Garber",
+	"license": "MIT",
+	"devEngines": {
+		"runtime": [
+			{
+				"name": "node",
+				"version": ">=24 <27",
+				"onFail": "download"
+			},
+			{
+				"name": "bun",
+				"version": ">=1.4 <2",
+				"onFail": "download"
+			}
+		]
+	},
+	"packageManager": "pnpm@12.18.0",
+	"type": "module",
+	"devDependencies": {
+		"@biomejs/biome": "^2.6.6",
+		"@types/node": "^26.6.6",
+		"knip": "^6.44.2",
+		"tsdown": "^0.23.7",
+		"typescript": "7.1.0-beta",
+		"vitest": "^5.1.0"
+	},
+	"dependencies": {
+		"@trycua/cua-driver": "^0.46.1",
+		"playwright-core": "^1.65.0",
+		"zod": "^4.6.7"
+	},
+	"files": [
+		"dist",
+		"README.md"
+	]
+}

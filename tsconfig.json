@@ -1,0 +1,27 @@
+{
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"compilerOptions": {
+		"target": "ES2024",
+		"lib": ["ES2024", "DOM", "DOM.Iterable"],
+		"module": "preserve",
+		"moduleResolution": "bundler",
+		"esModuleInterop": true,
+		"strict": true,
+		"noUncheckedIndexedAccess": true,
+		"resolveJsonModule": true,
+		"skipLibCheck": false,
+		"allowImportingTsExtensions": true,
+		"forceConsistentCasingInFileNames": true,
+		"isolatedModules": true,
+		"noImplicitAny": true,
+		"noImplicitThis": true,
+		"noImplicitOverride": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"verbatimModuleSyntax": true,
+		"useDefineForClassFields": true,
+		"types": ["vitest/globals", "node"],
+		"noEmit": true
+	},
+	"exclude": ["dist", "node_modules"]
+}

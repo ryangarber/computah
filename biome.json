@@ -1,0 +1,33 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.6.6/schema.json",
+	"files": {
+		"includes": [
+			"src/**/*.ts",
+			"*.ts",
+			"*.json",
+			"README.md",
+			"!dist",
+			"!pnpm-lock.yaml"
+		]
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab"
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"preset": "recommended"
+		}
+	},
+	"json": {
+		"formatter": {
+			"enabled": true
+		}
+	},
+	"javascript": {
+		"formatter": {
+			"quoteStyle": "double"
+		}
+	}
+}
