@@ -44,18 +44,11 @@
 	"author": "Ryan Garber",
 	"license": "MIT",
 	"devEngines": {
-		"runtime": [
-			{
-				"name": "node",
-				"version": ">=24 <27",
-				"onFail": "download"
-			},
-			{
-				"name": "bun",
-				"version": ">=1.4 <2",
-				"onFail": "download"
-			}
-		]
+		"runtime": {
+			"name": "node",
+			"version": ">=24 <27",
+			"onFail": "download"
+		}
 	},
 	"packageManager": "pnpm@12.18.0",
 	"type": "module",
