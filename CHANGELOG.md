@@ -1,3 +1,9 @@
+## v0.1.2 (2026-11-11)
+
+### Bug Fixes
+
+- search global node modules ([8ed47a1](https://github.com/ryangarber/computah/commit/8ed47a190ea43e12691a591ff284a109b1c59a72))
+
 ## v0.1.1 (2026-11-11)
 
 ### Other
