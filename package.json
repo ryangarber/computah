@@ -1,7 +1,7 @@
 {
 	"name": "computah",
 	"version": "0.1.0",
-	"description": "Typed browser, terminal and computer use, with one grammar of steps.",
+	"description": "Computah, make computah real.",
 	"exports": {
 		".": {
 			"types": "./dist/index.d.mts",
