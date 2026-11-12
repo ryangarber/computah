@@ -308,10 +308,14 @@ export const Driver = {
 		environment?: Record<string, string>;
 		session?: string;
 	}): Promise<DriverHandle> => {
-		const host = sdk.EmbeddedCuaDriverHost.withOptions(
+		// The SDK's checks are Unix-shaped on Windows: a path is only absolute
+		// with forward slashes (`C:/…`), and a host needs some id, where a
+		// Windows process has no bundle to name.
+		const windows = process.platform === "win32";
+		const options = () =>
 			sdk.EmbeddedDriverHostOptions.create({
-				binaryPath,
-				hostBundleId: bundleId,
+				binaryPath: windows ? binaryPath.replaceAll("\\", "/") : binaryPath,
+				hostBundleId: windows && !bundleId.trim() ? "computah" : bundleId,
 				approveCapabilityManifest: false,
 				approveSessionPolicy: false,
 				dangerouslyBypassApprovals: false,
@@ -322,8 +326,16 @@ export const Driver = {
 				inheritStderr: false,
 				noOverlay: false,
 				captureStderr: true,
-			}),
-		);
+			});
+		let host: ReturnType<typeof sdk.EmbeddedCuaDriverHost.withOptions>;
+		try {
+			// Options it refuses throw here, before there is a host to ask why.
+			host = sdk.EmbeddedCuaDriverHost.withOptions(options());
+		} catch (error) {
+			throw new Error(
+				`The driver at ${binaryPath} could not be started: ${describe(error)}`,
+			);
+		}
 		try {
 			const connection = await host.start();
 			children.add(connection.pid);

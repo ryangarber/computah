@@ -425,13 +425,23 @@ export const createComputer = (options: ComputerOptions = {}): Computer => {
 
 	// --- reading --------------------------------------------------------------
 
+	/**
+	 * Whether the driver takes a screenshot's format and quality. The Windows
+	 * driver has neither (its screenshots are always PNG) and refuses a call
+	 * that names them, so one refusal stops them being sent again.
+	 */
+	let encodes = true;
 	const imageArgs = (image: ImageOptions = {}) => ({
 		max_image_dimension: image.maxDimension ?? MAX_EDGE,
-		screenshot_format: image.format ?? "jpeg",
-		...(image.quality && (image.format ?? "jpeg") === "jpeg"
+		...(encodes ? { screenshot_format: image.format ?? "jpeg" } : {}),
+		...(encodes && image.quality && (image.format ?? "jpeg") === "jpeg"
 			? { screenshot_quality: Math.min(image.quality, 95) }
 			: {}),
 	});
+	const refusesEncoding = (output: ToolOutput) =>
+		encodes &&
+		output.isError &&
+		/unknown argument (screenshot_format|screenshot_quality)/.test(output.text);
 
 	const toImage = (output: ToolOutput): Image | undefined => {
 		const [image] = output.images;
@@ -457,20 +467,26 @@ export const createComputer = (options: ComputerOptions = {}): Computer => {
 		} = {},
 	) => {
 		const window = needTarget();
-		const output = await driver.call(
-			"get_window_state",
-			{
-				pid: window.pid,
-				window_id: window.windowId,
-				include_screenshot: !!screenshot,
-				tree_format: "both",
-				max_elements: MAX_ELEMENTS,
-				max_depth: MAX_DEPTH,
-				timeout_ms: 5_000,
-				...(screenshot ? imageArgs(screenshot) : {}),
-			},
-			signal,
-		);
+		const call = () =>
+			driver.call(
+				"get_window_state",
+				{
+					pid: window.pid,
+					window_id: window.windowId,
+					include_screenshot: !!screenshot,
+					tree_format: "both",
+					max_elements: MAX_ELEMENTS,
+					max_depth: MAX_DEPTH,
+					timeout_ms: 5_000,
+					...(screenshot ? imageArgs(screenshot) : {}),
+				},
+				signal,
+			);
+		let output = await call();
+		if (screenshot && refusesEncoding(output)) {
+			encodes = false;
+			output = await call();
+		}
 		if (output.isError) {
 			if (output.code === "window_id_not_found") target = undefined;
 			fail(output);
