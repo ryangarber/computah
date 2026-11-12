@@ -1,3 +1,9 @@
+## v0.1.4 (2026-11-12)
+
+### Bug Fixes
+
+- kill embedded driver on exit ([366ed57](https://github.com/ryangarber/computah/commit/366ed57d7c25202089cbc7406b05b0f86fd03490))
+
 ## v0.1.3 (2026-11-11)
 
 ### Bug Fixes
