@@ -144,3 +144,7 @@ status = await computer.status({ refresh: true });
 
 macOS caches a process's grants, so a grant made while the host runs counts
 once the host is restarted.
+
+An `embedded` driver is killed when its computer is closed or the host
+process exits. A host that quits some other way (a native app's quit, which
+Node's `exit` event never sees) calls `Driver.killEmbedded()` first.

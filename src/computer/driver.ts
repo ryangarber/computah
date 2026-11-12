@@ -83,6 +83,27 @@ const windowsPaths = (home: string) => {
 	];
 };
 
+/**
+ * The `cua-driver` binaries started for this process, by process id. Each
+ * should end once this process does (it watches a pipe from it), but on macOS
+ * 0.46.1 stops serving and then waits on its cursor overlay forever, outliving
+ * the host. So they are killed outright: SIGTERM does not end them either.
+ */
+const children = new Set<number>();
+
+const kill = (pid: number) => {
+	try {
+		process.kill(pid, "SIGKILL");
+	} catch {}
+	children.delete(pid);
+};
+
+const killChildren = () => {
+	for (const pid of children) kill(pid);
+};
+
+let killOnExit = false;
+
 const destroy = (object: unknown) => {
 	try {
 		(object as { uniffiDestroy?: () => void }).uniffiDestroy?.();
@@ -305,23 +326,38 @@ export const Driver = {
 		);
 		try {
 			const connection = await host.start();
+			children.add(connection.pid);
+			if (!killOnExit) {
+				killOnExit = true;
+				process.once("exit", killChildren);
+			}
 			return wrap(sdk.CuaDriver.connect(connection.socketPath), "embedded", {
 				session,
 				owned: true,
 				onClose: async () => {
 					await host.stop().catch(() => {});
 					destroy(host);
+					kill(connection.pid);
 				},
 			});
 		} catch (error) {
 			const detail = host.lastDiagnostics()?.stderrTail.trim();
+			const pid = host.connection()?.pid;
 			await host.stop().catch(() => {});
+			if (pid) kill(pid);
 			destroy(host);
 			throw new Error(
 				`The driver at ${binaryPath} could not be started: ${describe(error)}${detail ? `\n${detail.slice(-1_000)}` : ""}`,
 			);
 		}
 	},
+
+	/**
+	 * Ends every `cua-driver` started by {@link Driver.embedded} at once, and
+	 * synchronously, for a host about to exit some way Node's `exit` event
+	 * does not see (a native quit, say). Plain exits already do this.
+	 */
+	killEmbedded: () => killChildren(),
 
 	/** A driver made elsewhere: left running when this one is closed. */
 	external: (
