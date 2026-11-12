@@ -1,3 +1,9 @@
+## v0.1.5 (2026-11-12)
+
+### Bug Fixes
+
+- use working screenshot, unix path on windows ([6fbc72f](https://github.com/ryangarber/computah/commit/6fbc72fd482b3fb9d2eb608fd35cc1f97a77674c))
+
 ## v0.1.4 (2026-11-12)
 
 ### Bug Fixes
