@@ -62,6 +62,8 @@ export interface DriverHandle {
 }
 
 const APP_NAME = "CuaDriver";
+/** How many labels a session tries before it gives up on a free one. */
+const MAX_LABELS = 50;
 const INSTALLER = "https://cua.ai/driver/install.sh";
 const INSTALLER_WINDOWS = "https://cua.ai/driver/install.ps1";
 
@@ -142,43 +144,77 @@ const wrap = (
 		owned,
 		onClose,
 	}: { session?: string; owned: boolean; onClose?: () => Promise<void> },
-): DriverHandle => ({
-	mode,
-	call: async (name, args = {}, signal) => {
-		signal?.throwIfAborted();
-		try {
-			const result = await instance.callTool(
-				name,
-				JSON.stringify(session ? { session, ...args } : args),
-				signal ? { signal } : undefined,
-			);
-			return {
-				text: result.text,
-				data: parse(result.structuredJson),
-				images: result.images.map((image) => ({
-					mime: image.mimeType,
-					data: image.dataBase64,
-				})),
-				isError: result.isError,
-				...(result.errorCode ? { code: result.errorCode } : {}),
-			};
-		} catch (error) {
-			if (signal?.aborted) throw signal.reason;
-			return { text: describe(error), data: {}, images: [], isError: true };
-		}
-	},
-	close: async () => {
-		if (owned) {
-			// Ends the run's session, and with it the cursor it drew.
-			await instance
-				.callTool("end_session", JSON.stringify(session ? { session } : {}))
-				.catch(() => {});
-			await instance.shutdown().catch(() => {});
-			destroy(instance);
-		}
-		await onClose?.();
-	},
-});
+): DriverHandle => {
+	/**
+	 * A named session belongs to the connection that first started it, for
+	 * as long as the driver service runs: no later connection may use it,
+	 * even once that one has gone. So a service shared between connections
+	 * (the app's, kept running across a host's restarts) is asked for the
+	 * label, then for `label 2`, `label 3`, … until one is free. The cursor
+	 * wears whichever it got.
+	 */
+	let label: Promise<string | undefined> | undefined;
+	const start = () => {
+		label ??= (async () => {
+			if (!session) return undefined;
+			for (let attempt = 1; attempt <= MAX_LABELS; attempt++) {
+				const name = attempt === 1 ? session : `${session} ${attempt}`;
+				const result = await instance
+					.callTool("start_session", JSON.stringify({ session: name }))
+					.then((result) => (result.isError ? result.text : undefined))
+					.catch(describe);
+				if (result === undefined) return name;
+				// Not refused for its name: a driver without sessions, say.
+				if (!/not available to this transport|has ended/i.test(result)) break;
+			}
+			return session;
+		})();
+		return label;
+	};
+
+	return {
+		mode,
+		call: async (name, args = {}, signal) => {
+			signal?.throwIfAborted();
+			try {
+				const active = await start();
+				const result = await instance.callTool(
+					name,
+					JSON.stringify(active ? { session: active, ...args } : args),
+					signal ? { signal } : undefined,
+				);
+				return {
+					text: result.text,
+					data: parse(result.structuredJson),
+					images: result.images.map((image) => ({
+						mime: image.mimeType,
+						data: image.dataBase64,
+					})),
+					isError: result.isError,
+					...(result.errorCode ? { code: result.errorCode } : {}),
+				};
+			} catch (error) {
+				if (signal?.aborted) throw signal.reason;
+				return { text: describe(error), data: {}, images: [], isError: true };
+			}
+		},
+		close: async () => {
+			if (owned) {
+				// Ends the run's session, and with it the cursor it drew.
+				const active = label && (await label);
+				await instance
+					.callTool(
+						"end_session",
+						JSON.stringify(active ? { session: active } : {}),
+					)
+					.catch(() => {});
+				await instance.shutdown().catch(() => {});
+				destroy(instance);
+			}
+			await onClose?.();
+		},
+	};
+};
 
 export const Driver = {
 	/** The SDK, or why it cannot be loaded here (no native library for this platform, say). */
