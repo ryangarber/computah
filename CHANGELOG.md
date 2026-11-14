@@ -1,3 +1,9 @@
+## v0.1.6 (2026-11-14)
+
+### Bug Fixes
+
+- use unique session label ([68ff8e8](https://github.com/ryangarber/computah/commit/68ff8e82f5177383dc62da06f3107e1b0f84f7dd))
+
 ## v0.1.5 (2026-11-12)
 
 ### Bug Fixes
