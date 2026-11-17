@@ -1,3 +1,9 @@
+## v0.1.7 (2026-11-17)
+
+### Other
+
+- bump dependencies ([18de1d7](https://github.com/ryangarber/computah/commit/18de1d753d2de6fbd2ca46d98dacea6a9a50b029))
+
 ## v0.1.6 (2026-11-14)
 
 ### Bug Fixes
