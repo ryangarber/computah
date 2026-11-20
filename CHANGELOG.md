@@ -1,3 +1,9 @@
+## v0.1.9 (2026-11-20)
+
+### Other
+
+- upgrade cua ([bc3bf17](https://github.com/ryangarber/computah/commit/bc3bf176401b608fdc6250ad4012c2bb11abca63))
+
 ## v0.1.8 (2026-11-20)
 
 ### Bug Fixes
