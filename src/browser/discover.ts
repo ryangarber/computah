@@ -34,7 +34,10 @@ const compare = (a: string, b: string) => {
 	return 0;
 };
 
-const isBun = () => !!(process.versions as Record<string, string>).bun;
+const versions = () => process.versions as Record<string, string | undefined>;
+const isBun = () => !!versions().bun;
+/** Electron's own binary starts the app unless told to act as Node. */
+const isElectron = () => !!versions().electron;
 
 export interface Runtime {
 	path: string;
@@ -58,6 +61,17 @@ export const findRuntime = async ({
 	exec?: Exec;
 } = {}): Promise<Runtime> => {
 	if (runtime) return { path: runtime, source: "option" };
+	if (isElectron()) {
+		// Electron's own Node, which an app that turns off the RunAsNode fuse
+		// has none of: it passes `runtime`.
+		return {
+			path: process.execPath,
+			version: process.version,
+			source: "host",
+			// Otherwise `-e` starts another copy of the app, which exits.
+			env: { ELECTRON_RUN_AS_NODE: "1" },
+		};
+	}
 	if (!isBun()) {
 		return { path: process.execPath, version: process.version, source: "host" };
 	}
@@ -67,7 +81,7 @@ export const findRuntime = async ({
 	if (node) return { path: node, source: "system" };
 	return {
 		path: process.execPath,
-		version: `bun ${(process.versions as Record<string, string>).bun}`,
+		version: `bun ${versions().bun}`,
 		source: "host",
 		// A compiled Bun program runs scripts only when told to act as Bun.
 		env: { BUN_BE_BUN: "1" },

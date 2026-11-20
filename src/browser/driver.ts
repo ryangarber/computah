@@ -29,6 +29,9 @@ function driver(load: any, proc: any) {
 	}
 	const send = (message: any) => out(`${JSON.stringify(message)}\n`);
 
+	// What let an Electron host run this as Node; not for the browser it launches.
+	delete proc.env.ELECTRON_RUN_AS_NODE;
+
 	const exists = (file: string) => {
 		try {
 			return fs.existsSync(file);

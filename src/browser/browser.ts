@@ -41,7 +41,8 @@ import type {
 export interface DriverTransport {
 	send: (line: string) => void;
 	onLine: (listener: (line: string) => void) => void;
-	onClose: (listener: () => void) => void;
+	/** Called once, when the driver is gone; with why, where that is known. */
+	onClose: (listener: (reason?: string) => void) => void;
 	close: () => void | Promise<void>;
 }
 
@@ -109,7 +110,8 @@ interface Driver {
 		{ resolve: (value: unknown) => void; reject: (error: Error) => void }
 	>;
 	next: number;
-	closed: boolean;
+	/** Why it exited, once it has. */
+	closed: false | { reason?: string };
 }
 
 const spawnTransport = (
@@ -119,18 +121,34 @@ const spawnTransport = (
 	const [program = "", ...args] = command;
 	const child: ChildProcess = spawn(program, args, {
 		env: { ...process.env, ...env },
-		stdio: ["pipe", "pipe", "ignore"],
+		stdio: ["pipe", "pipe", "pipe"],
 		windowsHide: true,
 	});
-	const closers: (() => void)[] = [];
-	let closed = false;
-	const onClose = () => {
+	// The driver silences stderr once it is up, so what arrives is why it
+	// could not start; only the end is kept.
+	let stderr = "";
+	child.stderr?.setEncoding("utf8").on("data", (chunk: string) => {
+		stderr = `${stderr}${chunk}`.slice(-2_000);
+	});
+	const closers: ((reason?: string) => void)[] = [];
+	let closed: { reason?: string } | undefined;
+	const onClose = (reason?: string) => {
 		if (closed) return;
-		closed = true;
-		for (const listener of closers) listener();
+		closed = { reason };
+		for (const listener of closers) listener(reason);
 	};
-	child.on("error", onClose);
-	child.on("close", onClose);
+	child.on("error", (error) => onClose(error.message));
+	child.on("close", (code, signal) => {
+		const output = stderr.trim();
+		onClose(
+			[
+				signal ? `signal ${signal}` : code ? `code ${code}` : undefined,
+				output || undefined,
+			]
+				.filter(Boolean)
+				.join(": ") || undefined,
+		);
+	});
 	// Written to after the driver has gone, a pipe would throw from nowhere.
 	child.stdin?.on("error", () => {});
 	return {
@@ -142,7 +160,7 @@ const spawnTransport = (
 				createInterface({ input: child.stdout }).on("line", listener);
 		},
 		onClose: (listener) => {
-			if (closed) listener();
+			if (closed) listener(closed.reason);
 			else closers.push(listener);
 		},
 		close: () => {
@@ -150,6 +168,15 @@ const spawnTransport = (
 			if (!closed) child.kill();
 		},
 	};
+};
+
+const exited = ({ closed }: Driver) => {
+	const reason = closed ? closed.reason : undefined;
+	return new Error(
+		reason
+			? `The browser driver exited (${reason})`
+			: "The browser driver exited",
+	);
 };
 
 /** Steps as the driver takes them: keys and modifiers named Playwright's way. */
@@ -205,10 +232,10 @@ export const createBrowser = (options: BrowserOptions = {}): Browser => {
 			if (message.error) request.reject(new Error(message.error.message));
 			else request.resolve(message.result);
 		});
-		transport.onClose(() => {
-			started.closed = true;
+		transport.onClose((reason) => {
+			started.closed = { reason };
 			for (const request of started.pending.values()) {
-				request.reject(new Error("The browser driver exited"));
+				request.reject(exited(started));
 			}
 			started.pending.clear();
 			void driver?.then(
@@ -239,7 +266,7 @@ export const createBrowser = (options: BrowserOptions = {}): Browser => {
 		signal?: AbortSignal,
 	): Promise<T> => {
 		signal?.throwIfAborted();
-		if (target.closed) throw new Error("The browser driver exited");
+		if (target.closed) throw exited(target);
 		const id = target.next++;
 		const result = new Promise<T>((resolve, reject) => {
 			target.pending.set(id, {
