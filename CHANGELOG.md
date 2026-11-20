@@ -1,3 +1,10 @@
+## v0.1.8 (2026-11-20)
+
+### Bug Fixes
+
+- **browser:** spawn playwright with correct node binary in electron apps ([20e029a](https://github.com/ryangarber/computah/commit/20e029aff4dd4de18c584510f44b82d15abc06aa))
+- capture stderr and return it when binaries fail to spawn ([20e029a](https://github.com/ryangarber/computah/commit/20e029aff4dd4de18c584510f44b82d15abc06aa))
+
 ## v0.1.7 (2026-11-17)
 
 ### Other
